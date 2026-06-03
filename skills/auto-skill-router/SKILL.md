@@ -10,17 +10,17 @@ Automatically detects and invokes all relevant skills for the current task. Ensu
 ## How It Works
 
 1. A `UserPromptSubmit` hook runs `skills-router.js` on every prompt
-2. The hook scores all installed skills against the prompt using keyword matching
+2. The hook scores **all** installed skills (active + archived) against the prompt using keyword matching
 3. Top matches appear in the system-reminder as `[SKILLS ROUTER]`
-4. Claude calls each suggested skill via the `Skill` tool before starting work
+4. Active skills → Claude calls via `Skill` tool; archived skills → Claude reads file and applies directly
 
 ## MANDATORY Rules (for Claude)
 
 When `[SKILLS ROUTER]` appears in system-reminder:
 
 1. **STOP** — do not start the task yet
-2. Call `Skill` tool for **every** skill listed, in order
-3. Read and apply each skill's instructions
+2. For skills listed under "call via Skill tool" → call `Skill` tool for each, in order
+3. For skills listed under "read + apply from skills-archive" → read `~/.claude/skills-archive/<name>/SKILL.md` and apply
 4. **THEN** start the actual work
 
 When no `[SKILLS ROUTER]` hint is present, still apply these always-on skills:

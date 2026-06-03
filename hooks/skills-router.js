@@ -1,7 +1,5 @@
 #!/usr/bin/env node
-// Auto Skill Router — https://github.com/scuensen/auto-skill-router
-// Reads user prompt, matches against skills index, injects relevant skills into system-reminder.
-// Add to ~/.claude/settings.json UserPromptSubmit hooks.
+// Skills router: reads user prompt, finds relevant skills, injects into system-reminder
 "use strict";
 
 const fs = require("fs");
@@ -27,6 +25,7 @@ function tokenize(text) {
     .filter((w) => w.length > 2);
 }
 
+// Words too common to be useful for matching
 const STOPWORDS = new Set([
   "use", "when", "this", "that", "with", "for", "and", "the", "or", "are",
   "is", "it", "in", "to", "of", "a", "an", "be", "by", "on", "at", "if",
@@ -46,6 +45,7 @@ function score(skill, promptTokens) {
   for (const token of promptTokens) {
     if (STOPWORDS.has(token)) continue;
     if (haystackSet.has(token)) hits += 2;
+    // partial match: token is substring of a haystack word
     else if (haystack.some((h) => h.includes(token) || token.includes(h))) hits += 1;
   }
   return hits;
@@ -74,22 +74,27 @@ async function main() {
 
   const scored = index
     .map((skill) => ({ ...skill, score: score(skill, promptTokens) }))
-    .filter((s) => s.score > 1) // require at least 2 points to reduce noise
+    .filter((s) => s.score > 1)
     .sort((a, b) => b.score - a.score)
     .slice(0, MAX_SKILLS);
 
   if (!scored.length) process.exit(0);
 
+  const active = scored.filter((s) => !s.archive);
+  const archived = scored.filter((s) => s.archive);
+
   const list = scored
-    .map((s) => `  • ${s.name} (score: ${s.score}) — ${s.description.slice(0, 80)}…`)
+    .map((s) => `  • ${s.name}${s.archive ? " [archive]" : ""} — ${s.description.slice(0, 80)}…`)
     .join("\n");
-  const names = scored.map((s) => s.name).join(", ");
 
-  process.stderr.write(
-    `[SKILLS ROUTER] Relevant skills for this task:\n${list}\n` +
-    `MANDATORY: Call Skill tool for each BEFORE starting work: ${names}\n`
-  );
+  const activeNames = active.map((s) => s.name).join(", ");
+  const archivedNames = archived.map((s) => s.name).join(", ");
 
+  let msg = `[SKILLS ROUTER] Relevant skills for this task:\n${list}\n`;
+  if (activeNames) msg += `MANDATORY — call via Skill tool: ${activeNames}\n`;
+  if (archivedNames) msg += `MANDATORY — read + apply from ~/.claude/skills-archive/: ${archivedNames}\n`;
+
+  process.stderr.write(msg);
   process.exit(0);
 }
 

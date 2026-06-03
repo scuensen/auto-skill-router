@@ -11,9 +11,9 @@ User prompt → skills-router.js → keyword scoring → [SKILLS ROUTER] in syst
 ```
 
 1. Hook runs on every prompt (UserPromptSubmit)
-2. Scores all 248+ installed skills via keyword matching against the prompt
+2. Scores **all** installed skills (active + archived, 1400+) via keyword matching against the prompt
 3. Top 6 matches injected as `[SKILLS ROUTER]` system-reminder
-4. CLAUDE.md rule forces Claude to call each skill via `Skill` tool before starting
+4. Active skills → Claude calls via `Skill` tool; archived → Claude reads file and applies directly
 
 ## Quick Install
 
